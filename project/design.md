@@ -2,7 +2,7 @@
 
 ## Descripción del archivo
 
-Este documento describe el problema de planificación de la misión Emergency Control y define el modelo de inteligencia artificial que utilizará el backend. Primero se explica el entorno, el estado y las reglas del mundo. Después se presenta la solución propuesta: búsqueda de costo uniforme (UCS) con búsqueda de grafos, estados canónicos y poda de estados dominados.
+Este documento describe el problema de planificación de la misión Emergency Control y define el modelo de inteligencia artificial que utilizará el backend. Primero se explica el entorno, el estado y las reglas del mundo. Después se presenta UCS como estrategia de referencia para los casos de optimalidad y una búsqueda satisficiente con poda de estados para resolver rápidamente la misión completa.
 
 El robot debe desplazarse por varias zonas, recoger llaves, herramientas y materiales, abrir puertas, reparar paneles y activar estaciones. Cada acción tiene un costo y consume batería. La misión termina cuando todas las estaciones indicadas por el escenario están en estado `ONLINE`.
 
@@ -139,6 +139,17 @@ La búsqueda mantiene:
 Se inserta el estado inicial con costo cero. En cada iteración se extrae el nodo de menor costo, se descartan entradas obsoletas y se comprueba la meta. La meta se comprueba al extraer, porque en ese momento UCS garantiza que no existe una solución más barata pendiente en `OPEN`.
 
 Si se encuentra la meta, se reconstruye el plan siguiendo los padres. Si `OPEN` queda vacío, se devuelve `solution_found: false` con `steps: []`.
+
+### Búsqueda satisficiente para la integración
+
+Para la ejecución del frontend se utiliza una búsqueda satisficiente guiada por
+el progreso de la misión. Esta estrategia prioriza recoger recursos, reparar
+paneles y activar estaciones, pero no garantiza el menor costo. Su objetivo es
+encontrar rápidamente cualquier plan legal que alcance la meta.
+
+UCS se conserva para demostrar completitud y optimalidad en los casos de prueba
+con costos y rutas alternativas. Ambas estrategias usan el mismo estado
+canónico, las mismas transiciones y la misma poda de estados.
 
 ### Poda de estados y dominancia
 
