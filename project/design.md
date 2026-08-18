@@ -86,7 +86,9 @@ Todas las acciones requieren que la batería sea mayor o igual al costo. Las acc
 
 El simulador permite `DROP` en cualquier zona si el objeto está en la carga. Sin embargo, generar todos los `DROP` posibles produciría muchas ubicaciones innecesarias para los objetos.
 
-La búsqueda genera `DROP` únicamente cuando la carga está llena, se necesita liberar capacidad, el objeto ya cumplió su función o se deja un recurso en una zona donde será necesario después. No se generan drops arbitrarios en todas las zonas.
+La búsqueda genera `DROP` únicamente cuando la carga está llena o cuando un
+recurso pendiente de la zona actual no cabe. No se generan drops arbitrarios en
+todas las zonas.
 
 Esta restricción es válida porque dejar un objeto en una zona sin utilidad no mejora la posición, la batería ni el progreso de la misión; solo agrega costo y crea estados adicionales.
 
@@ -101,6 +103,11 @@ s --a--> s' solamente si a pertenece a Applicable(s)
 La transición comprueba las precondiciones, aplica los efectos y descuenta el costo de la acción. Puede cambiar la zona, la batería, la carga, la posición de objetos, las puertas, los paneles y las estaciones. El escenario y sus constantes no cambian.
 
 Después de cada transición se canonicaliza el estado. Esto permite que la búsqueda de grafos reconozca configuraciones físicas equivalentes aunque se hayan alcanzado por historias diferentes.
+
+La implementación también compacta el suelo después de cada transición:
+elimina objetos que ya no pueden abrir puertas ni participar en reparaciones
+pendientes. La carga no se elimina automáticamente porque su peso todavía puede
+afectar la capacidad y debe liberarse mediante `DROP`.
 
 ## Prueba de meta
 
@@ -143,9 +150,11 @@ Si se encuentra la meta, se reconstruye el plan siguiendo los padres. Si `OPEN` 
 ### Búsqueda satisficiente para la integración
 
 Para la ejecución del frontend se utiliza una búsqueda satisficiente guiada por
-el progreso de la misión. Esta estrategia prioriza recoger recursos, reparar
+el progreso y el costo. Esta estrategia prioriza recoger recursos, reparar
 paneles y activar estaciones, pero no garantiza el menor costo. Su objetivo es
-encontrar rápidamente cualquier plan legal que alcance la meta.
+encontrar rápidamente cualquier plan legal que alcance la meta. La prioridad
+penaliza el costo acumulado y las acciones caras, especialmente movimientos y
+recargas.
 
 UCS se conserva para demostrar completitud y optimalidad en los casos de prueba
 con costos y rutas alternativas. Ambas estrategias usan el mismo estado
@@ -165,7 +174,9 @@ El estado `B` se elimina porque llegó con igual o mayor costo y tiene igual o m
 
 También se podan acciones que no generan progreso: abrir puertas abiertas, reparar paneles reparados, activar estaciones online, recargar con batería llena, recoger objetos que no caben y soltar objetos sin necesidad futura.
 
-Estas podas reducen el factor de ramificación sin modificar la solución óptima, porque eliminan acciones que no desbloquean capacidades ni mejoran la situación del robot.
+Estas podas reducen el factor de ramificación. Para UCS, la dominancia conserva
+la posibilidad de encontrar el menor costo; para la búsqueda satisficiente, la
+prioridad de costo es una preferencia práctica y no una garantía de optimalidad.
 
 ### Propiedades de UCS
 
@@ -191,7 +202,9 @@ Aunque el mapa tenga pocas zonas y el robot transporte pocos objetos, cada objet
 
 ### 3. Podas y abstracciones
 
-La solución utiliza estados canónicos, equivalencia de materiales por tipo, poda de objetos que ya no afectan el futuro, generación restringida de `DROP` y eliminación de estados dominados por costo y batería.
+La implementación utiliza estados canónicos, equivalencia de materiales por
+tipo, compactación de objetos del suelo que ya no afectan el futuro, generación
+restringida de `DROP` y eliminación de estados dominados por costo y batería.
 
 Estas decisiones son válidas porque conservan las acciones necesarias para abrir puertas, reparar paneles, recargar, activar estaciones y alcanzar la meta con menor costo.
 

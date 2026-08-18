@@ -374,9 +374,15 @@ def solve_satisficing(scenario: dict[str, Any], max_expansions: int = 200_000) -
 
         for action, next_state in successors(scenario, state):
             next_plan = (*plan, action)
-            # Prioriza interacciones y recogidas que reducen tareas pendientes.
+            # Prioriza progreso, pero evita corredores y recargas innecesariamente caros.
             action_bonus = {"INTERACT": -30, "PICKUP": -10, "DROP": 5, "MOVE": 0}.get(action["op"], 0)
-            score = _progress_score(scenario, next_state) + action_bonus + min(cost, 100) // 20
+            action_cost = int(action["cost"])
+            score = (
+                _progress_score(scenario, next_state)
+                + action_bonus
+                + cost // 10
+                + action_cost * 3
+            )
             heapq.heappush(queue, (score, cost + int(action["cost"]), next(sequence), next_state, next_plan))
 
     return {
